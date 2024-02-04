@@ -1,35 +1,36 @@
-import { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { selectContacts } from './Redux/selectors';
-import { fetchContacts } from './Redux/operations';
+import { Route, Routes } from "react-router-dom"
+import Layout from "./Layout"
+import { lazy, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { refreshUser } from "../ReduxToolkit/auth/operations"
+import { selectIsRefresh } from "../ReduxToolkit/auth/selectors"
+import RedirectRoute from "./RedirectRoute"
+import PrivateRoute from "./PrivateRoute"
+import { fetchContacts } from "ReduxToolkit/contacts/operations"
 
-import { Container, Wrapper, Title, SubTitle } from './App.styled';
-import ContactForm from './ContactForm/ContactForm';
-import ContactList from './ContactList/ContactList';
-import Filter from './Filter/Filter';
+const HomePage = lazy(() => import('../pages/Home'));
+const RegisterPage = lazy(() => import('../pages/Register'));
+const LoginPage = lazy(() => import('../pages/Login'));
+const ContactsPage = lazy(() => import('../pages/Contacts'));
 
+export const App = () => {
+    const dispatch = useDispatch();
+    const isRefresh = useSelector(selectIsRefresh);
 
-const App = () => {
-  const contacts = useSelector(selectContacts);
-  const dispatch = useDispatch()
+    useEffect(() => {
+        dispatch(refreshUser());
+        dispatch(fetchContacts());
+    }, [dispatch]);
 
-  useEffect(()=>{
-    dispatch(fetchContacts())
-  },[dispatch])
-
-  return (
-    <Container>
-      <Title>Phonebook</Title>
-      <ContactForm />
-      <SubTitle>Contacts</SubTitle>
-      {contacts.length > 0 ? (
-        <Filter />
-      ) : (
-        <Wrapper>Your phonebook is empty, add your first contact!</Wrapper>
-      )}
-      {contacts.length > 0 && <ContactList />}
-    </Container>
-  );
-};
-
-export default App;
+    return !isRefresh && (
+        <Routes>
+            <Route path='/' element={<Layout />} >
+                <Route index element={<HomePage />} />
+                <Route path='/register' element={<RedirectRoute component={RegisterPage} redirectTo='/contacts'/>} />
+                <Route path='/login' element={<RedirectRoute component={LoginPage} redirectTo="/contacts" />} />
+                <Route path='/contacts' element={<PrivateRoute component={ContactsPage} redirectTo="/login" />} />
+                <Route path='*' element={<HomePage />} />
+            </Route>
+        </Routes>
+    )
+}
